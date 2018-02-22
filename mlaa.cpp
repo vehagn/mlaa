@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <iostream>
 #include <stdlib.h>
+#include <math.h>
 
-void writeImg(int *pix, int w, int h) {
-
+void writeImg(const int *red, const int *blue, const int *green, const int w, const int h, const char* fname) {
+    // Create and save a .bmp image file using red, blue, green channels
     int filesize = 54 + 3*w*h;
     unsigned char *img = new unsigned char[3*w*h];
     int ind = 0;
@@ -11,9 +12,9 @@ void writeImg(int *pix, int w, int h) {
     for (int i=0; i<w; i++) {
         for (int j=0; j<h; j++) {
             ind = i + ((h-1)-j)*w;
-            img[ind*3+2] = (unsigned char)(pix[ind]); // r
-            img[ind*3+1] = (unsigned char)(pix[ind]); // g
-            img[ind*3+0] = (unsigned char)(pix[ind]); // b
+            img[ind*3+2] = (unsigned char)(red[ind]  ); // r
+            img[ind*3+1] = (unsigned char)(blue[ind] ); // g
+            img[ind*3+0] = (unsigned char)(green[ind]); // b
         }
     }
 
@@ -38,7 +39,7 @@ void writeImg(int *pix, int w, int h) {
 
     FILE *f;
 
-    f = fopen("img.bmp","wb");
+    f = fopen(fname,"wb");
     fwrite(bmpfileheader,1,14,f);
     fwrite(bmpinfoheader,1,40,f);
     for (int i=0; i<h; i++) {
@@ -50,11 +51,20 @@ void writeImg(int *pix, int w, int h) {
     fclose(f);
 }
 
+void writeImg(const int *grey, const int w, const int h, const char* fname){
+    // Create and save a .bmp file in greyscale calling the rgb-version.
+    writeImg(grey, grey, grey, w, h, fname);
+}
+
 int main (int argc, char *argv[]) {
 
     int w = 500;
     int h = 300;
     int ind = 0;
+
+    int *fill = new int[w*h];
+
+    for (int i=0; i<w*h; i++) fill[i] = 255;
 
     int *pix = new int[w*h];
 
@@ -63,14 +73,38 @@ int main (int argc, char *argv[]) {
         for (int j=0; j<h; j++) {
             ind = i + ((h-1)-j)*w;
             pix[ind] = 255; // Make sure we fill a color;
-            if (    i       < w/4) pix[ind] = 127;
-            if (j           < h/4) pix[ind] =  63;
-            if (j  +i - h/4 < h  ) pix[ind] =  31;
-            if (j-2*i + 4*h < w  ) pix[ind] =   0;
+            if (   i         < w/4) pix[ind] = 127;
+            if (     j       < h/4) pix[ind] =  63;
+            if (   i+j - h/4 < h  ) pix[ind] =  31;
+            if (-2*i+j + 4*h < w  ) pix[ind] =   0;
         }
     }
 
-    writeImg(pix,w,h);
+    writeImg(pix,w,h,"raw.bmp");
+
+    int *ver = new int[w*h];
+    int *hor = new int[w*h];
+
+    for (int i=0; i<w*h; i++) {
+        ver[i] = 255;
+        hor[i] = 255;
+    }
+
+    const int LIMIT = 10;
+
+    int ind_r, ind_b;
+
+    for (int i=0; i<w-1; i++) {
+        for (int j=0; j<h-1; j++) {
+            ind   = i   + ((h-1)-(j  ))*w;
+            ind_r = i+1 + ((h-1)-(j  ))*w;
+            ind_b = i   + ((h-1)-(j+1))*w;
+            if (abs(pix[ind] - pix[ind_r]) > LIMIT) ver[ind] = 0;
+            if (abs(pix[ind] - pix[ind_b]) > LIMIT) hor[ind] = 0;
+        }
+    }
+
+    writeImg(pix,ver,hor,w,h,"edge.bmp");
 
     return 0;
 }
