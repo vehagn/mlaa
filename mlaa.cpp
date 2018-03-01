@@ -51,15 +51,47 @@ void writeImg(const int *red, const int *blue, const int *green, const int w, co
     fclose(f);
 }
 
-void writeImg(const int *grey, const int w, const int h, const char* fname){
+void writeImg(const int *grey, const int w, const int h, const char* fname) {
     // Create and save a .bmp file in greyscale calling the rgb-version.
     writeImg(grey, grey, grey, w, h, fname);
 }
 
+void edgeDetect(const int *pix, int *ver, int *hor, int w, int h) {
+    const int LIMIT = 64;
+
+    int ind, ind_r, ind_b;
+
+    // Find vertical edges. Scan horizontal.
+    for (int i=0; i<w-1; i++) {
+        for (int j=0; j<h; j++) {
+            ind   = i   + ((h-1)-(j  ))*w;
+            ind_r = i+1 + ((h-1)-(j  ))*w;
+            ind_b = i   + ((h-1)-(j+1))*w;
+            if (abs(pix[ind] - pix[ind_r]) > LIMIT) {
+                // Pick the pixel with the highest value
+                ver[(pix[ind]>pix[ind_r])?(ind):(ind_r)] = 0;
+            }
+        }
+    }
+
+    // Find horizontal edges. Scan vertical.
+    for (int i=0; i<w; i++) {
+        for (int j=0; j<h-1; j++) {
+            ind   = i   + ((h-1)-(j  ))*w;
+            ind_r = i+1 + ((h-1)-(j  ))*w;
+            ind_b = i   + ((h-1)-(j+1))*w;
+            if (abs(pix[ind] - pix[ind_b]) > LIMIT) {
+                // Pick the pixel with the highest value
+                hor[(pix[ind]>pix[ind_b])?(ind):(ind_b)] = 0;
+            }
+        }
+    }
+}
+
 int main (int argc, char *argv[]) {
 
-    int w = 500;
-    int h = 300;
+    int w =  200;
+    int h =  100;
     int ind = 0;
 
     int *fill = new int[w*h];
@@ -90,19 +122,7 @@ int main (int argc, char *argv[]) {
         hor[i] = 255;
     }
 
-    const int LIMIT = 10;
-
-    int ind_r, ind_b;
-
-    for (int i=0; i<w-1; i++) {
-        for (int j=0; j<h-1; j++) {
-            ind   = i   + ((h-1)-(j  ))*w;
-            ind_r = i+1 + ((h-1)-(j  ))*w;
-            ind_b = i   + ((h-1)-(j+1))*w;
-            if (abs(pix[ind] - pix[ind_r]) > LIMIT) ver[ind] = 0;
-            if (abs(pix[ind] - pix[ind_b]) > LIMIT) hor[ind] = 0;
-        }
-    }
+    edgeDetect(pix, ver, hor, w, h);
 
     writeImg(pix,ver,hor,w,h,"edge.bmp");
 
