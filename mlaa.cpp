@@ -2,6 +2,11 @@
 #include <iostream>
 #include <stdlib.h>
 #include <math.h>
+#include <vector>
+
+inline int idx(int w, int h, int i, int j) {
+    return i + ((h-1)-j)*w;
+}
 
 void writeImg(const int *red, const int *blue, const int *green, const int w, const int h, const char* fname) {
     // Create and save a .bmp image file using red, blue, green channels
@@ -11,7 +16,7 @@ void writeImg(const int *red, const int *blue, const int *green, const int w, co
 
     for (int i=0; i<w; i++) {
         for (int j=0; j<h; j++) {
-            ind = i + ((h-1)-j)*w;
+            ind = idx(w,h,i,j);
             img[ind*3+2] = (unsigned char)(red[ind]  ); // r
             img[ind*3+1] = (unsigned char)(blue[ind] ); // g
             img[ind*3+0] = (unsigned char)(green[ind]); // b
@@ -64,12 +69,11 @@ void edgeDetect(const int *pix, int *ver, int *hor, int w, int h) {
     // Find vertical edges. Scan horizontal.
     for (int i=0; i<w-1; i++) {
         for (int j=0; j<h; j++) {
-            ind   = i   + ((h-1)-(j  ))*w;
-            ind_r = i+1 + ((h-1)-(j  ))*w;
-            ind_b = i   + ((h-1)-(j+1))*w;
+            ind   = idx(w,h,i  ,j  );
+            ind_r = idx(w,h,i+1,j  );
             if (abs(pix[ind] - pix[ind_r]) > LIMIT) {
                 // Pick the pixel with the highest value
-                ver[(pix[ind]>pix[ind_r])?(ind):(ind_r)] = 0;
+                ver[(pix[ind]>pix[ind_r])?(ind):(ind_r)] = 1;
             }
         }
     }
@@ -77,15 +81,51 @@ void edgeDetect(const int *pix, int *ver, int *hor, int w, int h) {
     // Find horizontal edges. Scan vertical.
     for (int i=0; i<w; i++) {
         for (int j=0; j<h-1; j++) {
-            ind   = i   + ((h-1)-(j  ))*w;
-            ind_r = i+1 + ((h-1)-(j  ))*w;
-            ind_b = i   + ((h-1)-(j+1))*w;
+            ind   = idx(w,h,i  ,j  );
+            ind_b = idx(w,h,i  ,j+1);
             if (abs(pix[ind] - pix[ind_b]) > LIMIT) {
                 // Pick the pixel with the highest value
-                hor[(pix[ind]>pix[ind_b])?(ind):(ind_b)] = 0;
+                hor[(pix[ind]>pix[ind_b])?(ind):(ind_b)] = 1;
             }
         }
     }
+}
+
+struct Shape {
+    int start_x = -1;
+    int start_y = -1;
+    int stop_x  = -1;
+    int stop_y  = -1;
+//    int turns =  0; // max two turns
+    int type  = -1;
+//    int dir   = -1; // last direction [n,e,s,w] = [0,1,2,3];
+};
+
+void checkNbd(const int w, const int h, int i, int j, int *edge, int *checked, Shape shape){
+    int nbd;
+    int k[8] = { 0, 1, 1, 1, 0,-1,-1,-1};
+    int l[8] = { 1, 1, 0,-1,-1,-1, 0, 1};
+
+    //  7 0 1
+    //  6 X 2
+    //  5 4 3
+
+    for (int n=0; n<8; n++) {
+        nbd = idx(w,h,i+k[n],j+l[n]);
+        if ((nbd < w*h) && (nbd > 0)) {
+            if (checked[nbd]) {continue;}
+            checked[nbd] = true;
+            if (edge[nbd]) {
+                shape.stop_x = i+k[n];
+                shape.stop_y = j+l[n];
+                checkNbd(w,h,i+k[n],j+l[n],edge,checked,shape);
+                return;
+            }
+        }
+    }
+
+
+
 }
 
 int main (int argc, char *argv[]) {
@@ -103,7 +143,7 @@ int main (int argc, char *argv[]) {
     // Create an image with some features
     for (int i=0; i<w; i++) {
         for (int j=0; j<h; j++) {
-            ind = i + ((h-1)-j)*w;
+            ind = idx(w,h,i,j);
             pix[ind] = 255; // Make sure we fill a color;
             if (   i         < w/4) pix[ind] = 127;
             if (     j       < h/4) pix[ind] =  63;
@@ -123,8 +163,47 @@ int main (int argc, char *argv[]) {
     }
 
     edgeDetect(pix, ver, hor, w, h);
+    writeImg(ver,w,h,"0ver.bmp");
+    writeImg(hor,w,h,"0hor.bmp");
 
-    writeImg(pix,ver,hor,w,h,"edge.bmp");
+    int *edge = new int[w*h];
+
+    for (int i=0; i<w; i++) {
+        for (int j=0; j<h; j++) {
+            ind = idx(w,h,i,j);
+            edge[ind] = 255;
+            if ((hor[ind] == 1) || (ver[ind] == 1)) {
+                edge[ind] = 1;
+            }
+        }
+    }
+    writeImg(edge,w,h,"edge.bmp");
+
+
+    std::vector<Shape> shapes;
+
+    int *checked = new int[w*h];
+
+    for (int i=0; i<w*h; i++) checked[i] = 0;
+
+
+    int ix, jy;
+    for (int i=0; i<w; i++) {
+        ix = i;
+        for (int j=0; j<h; j++) {
+            jy = j;
+            ind = idx(w,h,i,j);
+            if (edge[ind] && !checked[ind]) {
+                checked[ind] = true;
+                shapes.push_back(Shape());
+                shapes.back().start_x = i;
+                shapes.back().start_y = j;
+                // Check neigbourhood
+                checkNbd(w,h,i,j,edge,checked,shapes.back());
+            }
+        }
+    }
+    std::cout << shapes.size() << std::endl;
 
     return 0;
 }
