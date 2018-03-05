@@ -101,7 +101,7 @@ struct Shape {
 //    int dir   = -1; // last direction [n,e,s,w] = [0,1,2,3];
 };
 
-void checkNbd(const int w, const int h, int i, int j, int *edge, int *checked, Shape shape){
+void checkNbd(const int w, const int h, int i, int j, int *edge, int *checked, Shape *shape){
     int nbd;
     int k[8] = { 0, 1, 1, 1, 0,-1,-1,-1};
     int l[8] = { 1, 1, 0,-1,-1,-1, 0, 1};
@@ -114,11 +114,15 @@ void checkNbd(const int w, const int h, int i, int j, int *edge, int *checked, S
         nbd = idx(w,h,i+k[n],j+l[n]);
         if ((nbd < w*h) && (nbd > 0)) {
             if (checked[nbd]) {continue;}
-            checked[nbd] = true;
+            checked[nbd] = 100;
             if (edge[nbd]) {
-                shape.stop_x = i+k[n];
-                shape.stop_y = j+l[n];
-                checkNbd(w,h,i+k[n],j+l[n],edge,checked,shape);
+                shape->stop_x = i+k[n];
+                shape->stop_y = j+l[n];
+                // If we're not diagonal away, expand shape.
+                if (abs(k[n])+abs(l[n])<3) {
+                    //std::cout << "EXPAND!" << std::endl;
+                    checkNbd(w,h,i+k[n],j+l[n],edge,checked,shape);
+                }
                 return;
             }
         }
@@ -130,8 +134,8 @@ void checkNbd(const int w, const int h, int i, int j, int *edge, int *checked, S
 
 int main (int argc, char *argv[]) {
 
-    int w =  200;
-    int h =  100;
+    int w =  20;
+    int h =  10;
     int ind = 0;
 
     int *fill = new int[w*h];
@@ -171,9 +175,9 @@ int main (int argc, char *argv[]) {
     for (int i=0; i<w; i++) {
         for (int j=0; j<h; j++) {
             ind = idx(w,h,i,j);
-            edge[ind] = 255;
+            edge[ind] = 0;
             if ((hor[ind] == 1) || (ver[ind] == 1)) {
-                edge[ind] = 1;
+                edge[ind] = 255;
             }
         }
     }
@@ -194,16 +198,24 @@ int main (int argc, char *argv[]) {
             jy = j;
             ind = idx(w,h,i,j);
             if (edge[ind] && !checked[ind]) {
+                std::cout << "x: " << i << "\ty: " << j << "\tind: " << ind << std::endl;
                 checked[ind] = true;
                 shapes.push_back(Shape());
                 shapes.back().start_x = i;
                 shapes.back().start_y = j;
                 // Check neigbourhood
-                checkNbd(w,h,i,j,edge,checked,shapes.back());
+                checkNbd(w,h,i,j,edge,checked,&shapes.back());
             }
         }
     }
     std::cout << shapes.size() << std::endl;
+
+    for (int i=0; i<shapes.size(); i++){
+        std::cout << shapes.at(i).start_x << " " << shapes.at(i).start_y << " -> ";
+        std::cout << shapes.at(i).stop_x  << " " << shapes.at(i).stop_y  << std::endl;
+    }
+
+    writeImg(checked,w,h,"checked.bmp");
 
     return 0;
 }
