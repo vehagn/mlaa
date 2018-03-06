@@ -96,12 +96,13 @@ struct Shape {
     int start_y = -1;
     int stop_x  = -1;
     int stop_y  = -1;
-//    int turns =  0; // max two turns
-    int type  = -1;
+    int turns   =  0; // max two turns
+    int type    = -1;
 //    int dir   = -1; // last direction [n,e,s,w] = [0,1,2,3];
 };
 
 void checkNbd(const int w, const int h, int i, int j, int *edge, int *checked, Shape *shape){
+    // Check neighbourhooding pixels if they contain an edge and expand shape if criteria are met
     int nbd;
     int k[8] = { 0, 1, 1, 1, 0,-1,-1,-1};
     int l[8] = { 1, 1, 0,-1,-1,-1, 0, 1};
@@ -110,31 +111,65 @@ void checkNbd(const int w, const int h, int i, int j, int *edge, int *checked, S
     //  6 X 2
     //  5 4 3
 
+    int t_norm;
+
     for (int n=0; n<8; n++) {
+        // Stop if we have found our shape
+        if (shape->turns > 1) {return;}
         nbd = idx(w,h,i+k[n],j+l[n]);
         if ((nbd < w*h) && (nbd > 0)) {
+            // Skip if we're already checked pixel
             if (checked[nbd]) {continue;}
             checked[nbd] = 100;
             if (edge[nbd]) {
-                shape->stop_x = i+k[n];
-                shape->stop_y = j+l[n];
-                // If we're not diagonal away, expand shape.
-                if (abs(k[n])+abs(l[n])<3) {
-                    //std::cout << "EXPAND!" << std::endl;
+                t_norm = abs(k[n]) + abs(l[n]);
+
+                if ((shape->turns > 0) || (t_norm == 2)) checked[nbd] = 0;
+
+                // Continue expanding shape if we can
+                if (t_norm < 2) {
+                    shape->stop_x = i+k[n];
+                    shape->stop_y = j+l[n];
+                    checkNbd(w,h,i+k[n],j+l[n],edge,checked,shape);
+                }
+                if ((t_norm == 2) && shape->turns < 1) {
+                    shape->stop_x = i+k[n];
+                    shape->stop_y = j+l[n];
+                    shape->turns++;
                     checkNbd(w,h,i+k[n],j+l[n],edge,checked,shape);
                 }
                 return;
             }
         }
     }
+}
 
+void findShapes(const int w, const int h, int *edge, std::vector<Shape> &shapes) {
+    int ind;
 
+    int *checked = new int[w*h];
+    for (int i=0; i<w*h; i++) checked[i] = 0;
 
+    for (int i=0; i<w; i++) {
+        for (int j=h-1; j>-1; j--) {
+            ind = idx(w,h,i,j);
+            if (edge[ind] && !checked[ind]) {
+                checked[ind] = 10;
+                shapes.push_back(Shape());
+                shapes.back().start_x = i;
+                shapes.back().start_y = j;
+                // Check neigbourhood
+                checkNbd(w,h,i,j,edge,checked,&shapes.back());
+                // The last shape part should be available for next shape
+                // checked[idx(w,h,shapes.back().stop_x,shapes.back().stop_y)] = 0;
+            }
+        }
+    }
 }
 
 int main (int argc, char *argv[]) {
 
-    int w =  20;
+    int w =  10;
     int h =  10;
     int ind = 0;
 
@@ -145,16 +180,32 @@ int main (int argc, char *argv[]) {
     int *pix = new int[w*h];
 
     // Create an image with some features
-    for (int i=0; i<w; i++) {
-        for (int j=0; j<h; j++) {
-            ind = idx(w,h,i,j);
-            pix[ind] = 255; // Make sure we fill a color;
-            if (   i         < w/4) pix[ind] = 127;
-            if (     j       < h/4) pix[ind] =  63;
-            if (   i+j - h/4 < h  ) pix[ind] =  31;
-            if (-2*i+j + 4*h < w  ) pix[ind] =   0;
-        }
-    }
+//    for (int i=0; i<w; i++) {
+//        for (int j=0; j<h; j++) {
+//            ind = idx(w,h,i,j);
+//            pix[ind] = 255; // Make sure we fill a color;
+//            if (   i         < w/4) pix[ind] = 127;
+//            if (     j       < h/4) pix[ind] =  63;
+//            if (   i+j - h/4 < h  ) pix[ind] =  31;
+//            if (-2*i+j + 4*h < w  ) pix[ind] =   0;
+//        }
+//    }
+
+    pix[idx(w,h,0,9)]=127;
+    pix[idx(w,h,0,8)]=127;
+    pix[idx(w,h,1,7)]=127;
+    pix[idx(w,h,2,6)]=127;
+    pix[idx(w,h,3,5)]=127;
+    pix[idx(w,h,4,5)]=127;
+    pix[idx(w,h,5,4)]=127;
+    pix[idx(w,h,6,3)]=127;
+    pix[idx(w,h,5,2)]=127;
+    pix[idx(w,h,4,1)]=127;
+    pix[idx(w,h,3,1)]=127;
+    pix[idx(w,h,2,0)]=127;
+
+    pix[idx(w,h,6,8)]=127;
+    pix[idx(w,h,7,8)]=127;
 
     writeImg(pix,w,h,"raw.bmp");
 
@@ -183,39 +234,19 @@ int main (int argc, char *argv[]) {
     }
     writeImg(edge,w,h,"edge.bmp");
 
-
     std::vector<Shape> shapes;
 
-    int *checked = new int[w*h];
+    findShapes(w, h, edge, shapes);
 
-    for (int i=0; i<w*h; i++) checked[i] = 0;
-
-
-    int ix, jy;
-    for (int i=0; i<w; i++) {
-        ix = i;
-        for (int j=0; j<h; j++) {
-            jy = j;
-            ind = idx(w,h,i,j);
-            if (edge[ind] && !checked[ind]) {
-                std::cout << "x: " << i << "\ty: " << j << "\tind: " << ind << std::endl;
-                checked[ind] = true;
-                shapes.push_back(Shape());
-                shapes.back().start_x = i;
-                shapes.back().start_y = j;
-                // Check neigbourhood
-                checkNbd(w,h,i,j,edge,checked,&shapes.back());
-            }
-        }
-    }
-    std::cout << shapes.size() << std::endl;
+    std::cout << "Number of shapes: " << shapes.size() << std::endl;
 
     for (int i=0; i<shapes.size(); i++){
         std::cout << shapes.at(i).start_x << " " << shapes.at(i).start_y << " -> ";
-        std::cout << shapes.at(i).stop_x  << " " << shapes.at(i).stop_y  << std::endl;
+        std::cout << shapes.at(i).stop_x  << " " << shapes.at(i).stop_y  << " \t ";
+        std::cout << shapes.at(i).turns   << std::endl;
     }
 
-    writeImg(checked,w,h,"checked.bmp");
+//    writeImg(checked,w,h,"checked.bmp");
 
     return 0;
 }
