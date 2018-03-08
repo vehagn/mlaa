@@ -133,12 +133,38 @@ struct line {
 
 class Shape2 {
     public:
+        void setStart(int _x, int _y) {start_x = _x; start_y = _y;}
+        void setEnd(int _x, int _y) {end_x = _x; end_y = _y;}
+
+        void setType(int _y) {
+            if (start_y < end_y)      type = 1;
+            else if (start_y > end_y) type = 2;
+            else if (end_y == _y)     type = 4;
+            else                      type = 8;
+        }
+
+        int getStartX(){return start_x;}
+        int getStartY(){return start_y;}
+
+        int getEndX(){return end_x;}
+        int getEndY(){return end_y;}
+
+        int getType(){return type;}
+
+        void reset(){
+            start_x = -1;
+            start_y = -1;
+            end_x   = -1;
+            end_y   = -1;
+            type    = -1;
+        }
+
+    private:
         int start_x = -1;
         int start_y = -1;
         int end_x = -1;
         int end_y = -1;
         int type = -1; // 1 = \, 2 = /, 4 = U, 8 = ^
-    private:
 };
 
 
@@ -189,72 +215,57 @@ void findShapes2(const int w, const int h, int *edge) {
                 // If we're at the edge we might find L shapes
                 if (h_edge) {
                     found_hor = true;
-                    shape.start_x =  i;
-                    shape.start_y =  j;
-                    shape.type    = 16;
+                    shape.setStart(i,j);
                 }
             }
 
             // True if we have a vertical edge and haven't found a left edge yet.
 
             if (v_edge && !found_left) {
-                ort[0] = (v_edge & r_edgei;
+                ort[0] = i; //(v_edge & r_edge);
                 ort[1] = (edge[ind] & v_edge)?(j):(j+1);
                 found_left = true;
             }
 
             if (h_edge && found_left && !found_hor) {
-                shape.start_x = ort[0];
-                shape.start_y = ort[1];
+                shape.setStart(ort[0],ort[1]);
                 found_hor = true;
             }
 
             // We've failed to find a matching right wall. Forget the left wall.
             if (!h_edge && found_left && found_hor) {
                 found_left = false;
+                // TODO: set L shape
             }
 
             if (v_edge && found_hor) {
                 ort[0] = i;
                 ort[1] = (edge[ind] & v_edge)?(j):(j+1);
-                if (shape.end_y == -1) {
-                    shape.end_y = ort[1];
-                }
-                if (shape.end_y != shape.end_x) {
-                    shape.end_y = ort[1];
-                }
+              //  if (shape.getEndY() == -1) {
+              //      shape.setEndY(ort[1]);
+              //  }
+              //  if (shape.getEndY() != shape.getEndX()) {
+              //      shape.setEndY(ort[1]);
+              //  }
             }
 
             // We've run out of horizontal edge and will end the shape
             if (!h_edge && found_hor) {
-                shape.end_x = ort[0];
-                shape.end_y = ort[1];
-
-                if (shape.start_y < shape.end_y) {
-                    shape.type = 1;
-                }
-                else if (shape.start_y > shape.end_y) {
-                    shape.type = 2;
-                }
-                else if (shape.end_y == j) {
-                    shape.type = 4;
-                }
-                else {
-                    shape.type = 8;
-                }
+                shape.setEnd(ort[0],ort[1]);
+                shape.setType(j);
 
                 shapes.push_back(shape);
 
                 // reset right and horizontal edge
                 found_right = false;
                 found_hor   = false;
-
-                // reset shape
-                shape.start_x = -1;
-                shape.start_y = -1;
-                shape.end_x   = -1;
-                shape.end_y   = -1;
-                shape.type    = -1;
+                shape.reset();
+           //     // reset shape
+           //     shape.start_x = -1;
+           //     shape.start_y = -1;
+           //     shape.end_x   = -1;
+           //     shape.end_y   = -1;
+           //     shape.type    = -1;
             }
         }
     }
@@ -266,11 +277,11 @@ void findShapes2(const int w, const int h, int *edge) {
 
     for (int i=0; i<shapes.size(); i++){
         shape = shapes.at(i);
-        std::cout << std::setw(2) << shape.start_x << " " << std::setw(2) << shape.start_y << " -> ";
-        std::cout << std::setw(2) << shape.end_x   << " " << std::setw(2) << shape.end_y   << " \t ";
-        std::cout << std::setw(2) << shape.type    << std::endl;
-        pix[idx(w,h,shape.start_x, shape.start_y)] = 0;
-        pix[idx(w,h,shape.end_x  , shape.end_y  )] = 0;
+        std::cout << std::setw(2) << shape.getStartX() << " " << std::setw(2) << shape.getStartY() << " -> ";
+        std::cout << std::setw(2) << shape.getEndX()   << " " << std::setw(2) << shape.getEndY()   << " \t ";
+        std::cout << std::setw(2) << shape.getType()    << std::endl;
+        pix[idx(w,h,shape.getStartX(), shape.getStartY())] = 0;
+        pix[idx(w,h,shape.getEndX()  , shape.getEndY()  )] = 0;
     }
     writeImg(pix, w, h, "edge2.bmp");
 }
