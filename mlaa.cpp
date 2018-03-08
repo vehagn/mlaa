@@ -100,7 +100,8 @@ class Shape {
         void setEnd(int _x, int _y) {end_x = _x; end_y = _y;}
 
         void setType(int _y) {
-            if (start_y < end_y)      type = 1;
+            if (_y == -32) type = 32;
+            else if (start_y < end_y) type = 1;
             else if (start_y > end_y) type = 2;
             else if (end_y == _y)     type = 4;
             else                      type = 8;
@@ -149,7 +150,7 @@ void findShapes(const int w, const int h, int *edge, std::vector<Shape> &shapes)
 
     int *ort = new int[2];
     //ort[0] = -1; ort[1] = -1;
-
+    //TODO: Create a column sweep based on the row sweep
     for (int j=0; j<h-1; j++) {
         for (int i=0; i<w; i++) {
             ind   = idx(w,h,i  ,j  );
@@ -174,38 +175,38 @@ void findShapes(const int w, const int h, int *edge, std::vector<Shape> &shapes)
             }
 
             // True if we have a vertical edge and haven't found a left edge yet.
-            if (v_edge && !found_left) {
+            if (v_edge && !found_left && !found_hor) {
                 ort[0] = i; //(v_edge & r_edge);
                 ort[1] = (edge[ind] & v_edge)?(j):(j+1);
                 found_left = true;
             }
 
-            if (h_edge && found_left && !found_hor) {
+            if (h_edge && !found_hor) {
                 shape.setStart(ort[0],ort[1]);
                 found_hor = true;
-            }
-
-            // We've failed to find a matching right wall. Forget the left wall.
-            if (!h_edge && found_left && found_hor) {
-                found_left = false;
-                // TODO: set L shape
             }
 
             if (v_edge && found_hor) {
                 ort[0] = i;
                 ort[1] = (edge[ind] & v_edge)?(j):(j+1);
-              //  if (shape.getEndY() == -1) {
-              //      shape.setEndY(ort[1]);
-              //  }
-              //  if (shape.getEndY() != shape.getEndX()) {
-              //      shape.setEndY(ort[1]);
-              //  }
             }
 
             // We've run out of horizontal edge and will end the shape
             if (!h_edge && found_hor) {
-                shape.setEnd(ort[0],ort[1]);
-                shape.setType(j);
+                if (!found_left){//We've found an L shape
+                    shape.setEnd(ort[0],ort[1]);
+                    shape.setType(-32);
+                }
+                else{
+                    // If both ort edges are on the same side we have a u-shape and should
+                    // decrease the length of our shape
+                    // TODO: Fix u shapes! These following shapes give different results:
+                    // XXXX     0000
+                    // X00X =/= 0XX0
+                    ort[0] = (ort[1]==shape.getStartY())?(ort[0]-1):(ort[0]);
+                    shape.setEnd(ort[0],ort[1]);
+                    shape.setType(j);
+                }
 
                 shapes.push_back(shape);
 
@@ -219,33 +220,127 @@ void findShapes(const int w, const int h, int *edge, std::vector<Shape> &shapes)
     }
 }
 
-void blend(const int w, const int h, int *pix, Shape shape) {
+void blend(const int w, const int h, int *pix, std::vector<Shape> &shapes) {
     int c_old, c_opp;
     float b1, b2;
     float A;
 
+    int x_len, y_len;
+    int x_start, y_start;
+    int x_end, y_end;
+
+    float eps = 1e-8;
+
+    int type;
+
+    Shape shape;
+
     int *tmp = new int[w*h];
     for (int i=0; i<w*h; i++) {tmp[i] = pix[i];}
 
-    if (shape.getType() == 2){
-        int x = shape.getEndX() - shape.getStartX();
-        int y = shape.getStartY();
-        for (int i=0; i<x; i++) {
-            b1 = 0.5 - (i    )/(1.0*x);
-            b2 = 0.5 - (i+1.0)/(1.0*x);
-            // If we're in a split cell only calculate the triangle area,
-            // else the area will be zero.
-            A = 0.5*fabs((fabs(b1+b2)>1e-8)?(b1+b2):(b1));
-            if (b1 > 0){
-                c_old = tmp[idx(w,h,shape.getStartX()+(i+1),shape.getStartY())];
-                c_opp = tmp[idx(w,h,shape.getStartX()+(i+1),shape.getEndY()  )];
-                pix[idx(w,h,shape.getStartX()+(i+1),shape.getStartY())] = (1-A)*c_old + A*c_opp;
+    for (int s=0; s<shapes.size(); s++) {
+        shape = shapes.at(s);
+
+        x_start = shape.getStartX();
+        y_start = shape.getStartY();
+        x_end   = shape.getEndX();
+        y_end   = shape.getEndY();
+
+        type    = shape.getType();
+
+        x_len = abs(x_start - x_end);
+        y_len = abs(y_start - y_end);
+        if (type ==    1) {
+            for (int i=0; i<x_len; i++) {
+                b1 = 0.5 - (i    )/(1.0*x_len);
+                b2 = 0.5 - (i+1.0)/(1.0*x_len);
+                // If we're in a split cell only calculate the triangle area,
+                // else the area will be zero.
+                A = 0.5*fabs((fabs(b1+b2)>eps)?(b1+b2):(b1));
+                if (b1 > 0) {
+                    c_old = tmp[idx(w,h,x_start+i,y_start)];
+                    c_opp = tmp[idx(w,h,x_start+i,y_end  )];
+                    pix[idx(w,h,x_start+i,y_start)] = (1-A)*c_old + A*c_opp;
+                    std::cout << y_start << " " << c_opp << std::endl;
+                }
+                if (b2 < 0) {
+                    c_old = tmp[idx(w,h,x_start+i,y_end  )];
+                    c_opp = tmp[idx(w,h,x_start+i,y_start)];
+                    pix[idx(w,h,x_start+i,y_end  )] = (1-A)*c_old + A*c_opp;
+                }
             }
-            if (b2 < 0){
-                c_old = tmp[idx(w,h,shape.getStartX()+(i+1),shape.getEndY()  )];
-                c_opp = tmp[idx(w,h,shape.getStartX()+(i+1),shape.getStartY())];
-                pix[idx(w,h,shape.getStartX()+(i+1),shape.getEndY())  ] = (1-A)*c_old + A*c_opp;
+        }
+        if (type ==    2) {
+            for (int i=0; i<x_len; i++) {
+                b1 = 0.5 - (i    )/(1.0*x_len);
+                b2 = 0.5 - (i+1.0)/(1.0*x_len);
+                // If we're in a split cell only calculate the triangle area,
+                // else the area will be zero.
+                A = 0.5*fabs((fabs(b1+b2)>eps)?(b1+b2):(b1));
+
+                if (b1 > 0) {
+                    c_old = tmp[idx(w,h,x_start+(i+1),y_start)];
+                    c_opp = tmp[idx(w,h,x_start+(i+1),y_end  )];
+                    pix[idx(w,h,x_start+(i+1),y_start)] = (1-A)*c_old + A*c_opp;
+                }
+                if (b2 < 0) {
+                    c_old = tmp[idx(w,h,x_start+(i+1),y_end  )];
+                    c_opp = tmp[idx(w,h,x_start+(i+1),y_start)];
+                    pix[idx(w,h,x_start+(i+1),y_end  )] = (1-A)*c_old + A*c_opp;
+                }
             }
+        }
+        if (type ==    4) {
+            for (int i=0; i<x_len; i++) {
+                b1 = 0.5 - (i    )/(1.0*x_len);
+                b2 = 0.5 - (i+1.0)/(1.0*x_len);
+
+                A = 0.5*fabs((fabs(b1+b2)>eps)?(b1+b2):(b1));
+
+                c_old = tmp[idx(w,h,x_start+(i+1),y_start  )];
+                c_opp = tmp[idx(w,h,x_start+(i+1),y_start-1)];
+
+                pix[idx(w,h,x_start+(i+1),y_start)] = (1-A)*c_old + A*c_opp;
+
+            }
+        }
+        if (type ==    8) {
+            for (int i=0; i<x_len; i++) {
+                b1 = 0.5 - (i    )/(1.0*x_len);
+                b2 = 0.5 - (i+1.0)/(1.0*x_len);
+
+                A = 0.5*fabs((fabs(b1+b2)>eps)?(b1+b2):(b1));
+
+                c_old = tmp[idx(w,h,x_start+(i+1),y_start  )];
+                c_opp = tmp[idx(w,h,x_start+(i+1),y_start-1)];
+
+                pix[idx(w,h,x_start+(i+1),y_start)] = (1-A)*c_old + A*c_opp;
+
+            }
+        }
+        if (type ==   16) {
+        // TODO
+        }
+        if (type ==   32) {
+        // TODO
+        }
+        if (type ==   64) {
+        // TODO
+        }
+        if (type ==  128) {
+        // TODO
+        }
+        if (type ==  256) {
+        // TODO
+        }
+        if (type ==  512) {
+        // TODO
+        }
+        if (type == 1024) {
+        // TODO
+        }
+        if (type == 2048) {
+        // TODO
         }
     }
     delete[] tmp;
@@ -274,6 +369,17 @@ int main (int argc, char *argv[]) {
             if (-2*i+j + 4*h < w  ) pix[ind] =   0;
         }
     }
+    // Create L shape
+    pix[idx(w,h, 0,9)]=255;
+    pix[idx(w,h, 1,9)]=255;
+    pix[idx(w,h, 2,9)]=255;
+
+    pix[idx(w,h,19,9)]=255;
+
+    // Create U shape
+    pix[idx(w,h,16,0)]=255;
+    pix[idx(w,h,17,0)]=255;
+    pix[idx(w,h,18,0)]=255;
 
 //    pix[idx(w,h,0,9)]=127;
 //    pix[idx(w,h,0,8)]=127;
@@ -321,7 +427,7 @@ int main (int argc, char *argv[]) {
         std::cout << std::setw(2) << shape.getEndX()   << " " << std::setw(2) << shape.getEndY()   << " \t ";
         std::cout << std::setw(2) << shape.getType()    << std::endl;
         shapepix[idx(w,h,shape.getStartX(), shape.getStartY())] = 0;
-        pix[idx(w,h,shape.getEndX()  , shape.getEndY()  )] = 0;
+        shapepix[idx(w,h,shape.getEndX()  , shape.getEndY()  )] = 0;
     }
     writeImg(shapepix, w, h, "shapes.bmp");
 
@@ -340,10 +446,19 @@ int main (int argc, char *argv[]) {
     }
     std::cout << std::endl;
 
-    for (int i=0; i<shapes.size(); i++){
-        blend(w,h,pix,shapes.at(i));
-    }
+    blend(w,h,pix,shapes);
+
     writeImg(pix,w,h,"mlaa.bmp");
+
+    std::cout << std::endl << "   ";
+    for (int i=0; i<w; i++) std::cout << std::setw(4) << i;
+    for (int j=0; j<h; j++) {
+        std::cout << std::endl << std::setw(3) << j << " ";
+        for (int i=0; i<w; i++) {
+            std::cout << std::setw(3) << pix[idx(w,h,i,j)] << " ";
+        }
+    }
+    std::cout << std::endl;
 
     return 0;
 }
