@@ -97,7 +97,7 @@ void edgeDetect2(const int w, const int h, const int *pix, int *edge) {
 
     int ind, ind_r, ind_b;
 
-    enum {l_edge=1, r_edge=2, t_edge=4, b_edge=8};
+    enum {l_edge=1, r_edge=2, b_edge=4, t_edge=8};
 
     // Find vertical edges. Scan horizontal.
     for (int i=0; i<w-1; i++) {
@@ -118,7 +118,7 @@ void edgeDetect2(const int w, const int h, const int *pix, int *edge) {
             ind_b = idx(w,h,i  ,j+1);
             if (abs(pix[ind] - pix[ind_b]) > LIMIT) {
                 // Store in pixel with the lowest (darkest) value
-                edge[(pix[ind]<pix[ind_b])?(ind):(ind_b)] += (pix[ind]>pix[ind_b])?(b_edge):(t_edge);
+                edge[(pix[ind]<pix[ind_b])?(ind):(ind_b)] += (pix[ind]>pix[ind_b])?(t_edge):(b_edge);
             }
         }
     }
@@ -165,6 +165,7 @@ void findShapes2(const int w, const int h, int *edge) {
     int *ort = new int[2];
     ort[0] = -1;
     ort[1] = -1;
+    int start = -1;
 
     for (int j=0; j<h-1; j++) {
         for (int i=0; i<w; i++) {
@@ -175,8 +176,8 @@ void findShapes2(const int w, const int h, int *edge) {
           //  std::cout << std::setw(2) << edge[ind_b] << std::endl;
 
             // Create slices that are the collective of the upper and lower pixel being checked.
-            v_edge = ((edge[ind] | edge[ind_b]) & (l_edge|r_edge));
-            h_edge = ((edge[ind] & t_edge) || (edge[ind_b] & b_edge));
+            v_edge = ((edge[ind] | edge[ind_b]) & (l_edge | r_edge));
+            h_edge = ((edge[ind] & b_edge) || (edge[ind_b] & t_edge));
 
             // Reset flags for each line
             if (i==0) {
@@ -195,60 +196,53 @@ void findShapes2(const int w, const int h, int *edge) {
             }
 
             // True if we have a vertical edge and haven't found a left edge yet.
+
             if (v_edge && !found_left) {
-                found_left = true;
-                // We've found a left orthogonal edge,
-                // saving its position
-                ort[0] = (edge[ind] & v_edge)?(j):(j+1);
-            }
-
-            // We've found a right wall to match our left wall
-            if (v_edge && found_hor) {
+                ort[0] = (v_edge & r_edgei;
                 ort[1] = (edge[ind] & v_edge)?(j):(j+1);
-                // Save the edge if we don't have one.
+                found_left = true;
+            }
+
+            if (h_edge && found_left && !found_hor) {
+                shape.start_x = ort[0];
+                shape.start_y = ort[1];
+                found_hor = true;
+            }
+
+            // We've failed to find a matching right wall. Forget the left wall.
+            if (!h_edge && found_left && found_hor) {
+                found_left = false;
+            }
+
+            if (v_edge && found_hor) {
+                ort[0] = i;
+                ort[1] = (edge[ind] & v_edge)?(j):(j+1);
                 if (shape.end_y == -1) {
                     shape.end_y = ort[1];
                 }
-                // Save right shape if it's opposite the left
-                if (ort[0] != ort[1]) {
+                if (shape.end_y != shape.end_x) {
                     shape.end_y = ort[1];
                 }
-                found_right = true;
             }
 
-            // If we've found a left edge we can start building our shape if we have a
-            // horizontal edge.
-            if (h_edge && found_left) {
-                // Begin shape if it's the first horisontal edge we find.
-                if (!found_hor) {
-                    found_hor = true;
-                    shape.start_x = i;
-                    shape.start_y = ort[0];
-                }
-                shape.end_x = i;
-            }
-
-            // Save shape if the horizontal edge stops.
+            // We've run out of horizontal edge and will end the shape
             if (!h_edge && found_hor) {
-                // If we haven't found a right edge we have an L shape.
-                if (shape.end_y == -1) {
-                    shape.end_y =  j;
+                shape.end_x = ort[0];
+                shape.end_y = ort[1];
+
+                if (shape.start_y < shape.end_y) {
+                    shape.type = 1;
                 }
-                // Figure out which shape we have.
-                if (shape.type == -1) {
-                    if (ort[0] > ort[1]) {
-                         shape.type = 1; // shape type Z
-                    }
-                    else if (ort[0] < ort[1]) {
-                        shape.type = 2; // shape type /
-                    }
-                    else if (ort[0] == j) {
-                        shape.type = 4; // shape type U
-                    }
-                    else {
-                        shape.type = 8; // shape ype ^
-                    }
+                else if (shape.start_y > shape.end_y) {
+                    shape.type = 2;
                 }
+                else if (shape.end_y == j) {
+                    shape.type = 4;
+                }
+                else {
+                    shape.type = 8;
+                }
+
                 shapes.push_back(shape);
 
                 // reset right and horizontal edge
@@ -436,8 +430,11 @@ int main (int argc, char *argv[]) {
 
     writeImg(edgepix,w,h,"edge.bmp");
     findShapes2(w, h, edge);
+
+    std::cout << std::endl << "   ";
+    for (int i=0; i<w; i++) std::cout << std::setw(2) << i << " ";
     for (int j=0; j<h; j++) {
-        std::cout << std::endl;
+        std::cout << std::endl << std::setw(2) << j << " ";
         for (int i=0; i<w; i++) {
             if (edge[idx(w,h,i,j)]) {
                 std::cout << std::setw(2) << edge[idx(w,h,i,j)] << " ";
