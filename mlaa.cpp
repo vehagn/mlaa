@@ -204,15 +204,15 @@ void findShapesRow(const int w, const int h, int *edge, std::vector<Shape> &shap
 
             // We've run out of horizontal edge and will end the shape, or we're at the end
             if ((!h_edge && found_hor) || ((i==w-1) && h_edge)) {
-                if (!found_left){       //We've found an L-start shape
+                if (!found_left){       // We've found an L-start shape
                     shape.setEnd(ort[0],ort[1]);
                     shape.setType((j==ort[1])?(-32):(-64),true);
                 }
-                else if (!found_right){ //We've found an L-end shape
+                else if (!found_right){ // We've found an L-end shape
                     shape.setEnd(i     ,ort[1]);
                     shape.setType((j==ort[1])?(-128):(-256),true);
                 }
-                else{  //We've found a Z or U shape
+                else{  // We've found a Z or U shape
                     shape.setEnd(ort[0],ort[1]);
                     shape.setType(j,true);
                 }
@@ -234,101 +234,6 @@ void findShapesRow(const int w, const int h, int *edge, std::vector<Shape> &shap
 }
 
 void findShapesCol(const int w, const int h, int *edge, std::vector<Shape> &shapes) {
-    // We imagine a transposed shape
-    // l_edge => t_edge, r_edge => b_edge
-    // t_edge => l_edge, b_edge => r_edge
-    //enum {l_edge=1, r_edge=2, b_edge=4, t_edge=8};
-
-    enum {l_edge=8, r_edge=4, b_edge=2, t_edge=1};
-//    enum {l_edge=4, r_edge=8, b_edge=1, t_edge=2};
-
-    int v_edge, h_edge;
-
-    int ind,ind_b;
-    Shape shape;
-
-    bool found_right;
-    bool found_left;
-    bool found_hor ;
-
-    int *ort = new int[2];
-
-    for (int i=0; i<w-1; i++) {
-        for (int j=0; j<h; j++) {
-            ind   = idx(w,h,i  ,j  );
-            ind_b = idx(w,h,i+1,j  );
-
-            // Create slices that are the collective of the upper and lower pixel being checked.
-            v_edge = ((edge[ind] | edge[ind_b]) & (l_edge | r_edge));
-            h_edge = ((edge[ind] & b_edge) || (edge[ind_b] & t_edge));
-
-            // Reset flags for each line
-            if (j==0) {
-                found_right = false;
-                found_left  = false;
-                found_hor   = false;
-                ort[0] = -1;
-                ort[1] = -1;
-                // If we're at the edge we might find L shapes
-                if (h_edge) {
-                    found_hor = true;
-                    shape.setStart(i,j);
-                }
-            }
-
-            // True if we have a vertical edge and haven't found a left edge yet.
-            if (v_edge && !found_left && !found_hor) {
-                ort[0] = (edge[ind] & v_edge)?(i):(i+1);
-                ort[1] = (v_edge    & l_edge)?(j):(j+1);
-//                ort[0] = (v_edge    & l_edge)?(i):(i+1);
-//                ort[1] = (edge[ind] & v_edge)?(j):(j+1);
-                found_left = true;
-            }
-            // We've found a horizontal edge which will be the start of our shape
-            if (h_edge && !found_hor) {
-                shape.setStart(ort[0],ort[1]);
-                found_hor = true;
-            }
-            // We've found a possible right edge to keep until we run out of horizontal edge.
-            if (v_edge && found_hor) {
-                ort[0] = (edge[ind] & v_edge)?(i):(i+1);
-                ort[1] = (v_edge    & r_edge)?(j):(j-1);
-//                ort[0] = (v_edge    & r_edge)?(i):(i-1);
-//                ort[1] = (edge[ind] & v_edge)?(j):(j+1);
-                found_right = true;
-            }
-            // We've run out of horizontal edge and will end the shape, or we're at the end
-            if ((!h_edge && found_hor) || ((j==h-1) && h_edge)) {
-                if (!found_left){       //We've found an L-start shape
-                    shape.setEnd(ort[0],ort[1]);
-                    shape.setType((j==ort[1])?(-33):(-65),false);
-                }
-                else if (!found_right){ //We've found an L-end shape
-                    shape.setEnd(ort[0],     j);
-                    shape.setType((j==ort[1])?(-129):(-257),false);
-                }
-                else{  //We've found a Z or U shape
-                    shape.setEnd(ort[0],ort[1]);
-                    shape.setType(j,false);
-                }
-
-                shapes.push_back(shape);
-
-                // Reset flags
-                found_right = false;
-                found_left  = false;
-                found_hor   = false;
-                shape.reset();
-            }
-            // Reset if we don't have any edges
-            if (!h_edge && !v_edge) {
-                found_left = false;
-            }
-        }
-    }
-}
-
-void findShapesCol2(const int w, const int h, int *edge, std::vector<Shape> &shapes) {
     enum {l_edge=1, r_edge=2, b_edge=4, t_edge=8};
 
     int v_edge, h_edge;
@@ -351,9 +256,6 @@ void findShapesCol2(const int w, const int h, int *edge, std::vector<Shape> &sha
             v_edge = ((edge[ind] & r_edge) || (edge[ind_r] & l_edge));
             h_edge = ((edge[ind] | edge[ind_r]) & (b_edge | t_edge));
 
-//            v_edge = ((edge[ind] | edge[ind_r]) & (l_edge | r_edge));
-//            h_edge = ((edge[ind] & b_edge) || (edge[ind_r] & t_edge));
-
             // Reset flags for each line
             if (j==0) {
                 found_bot = false;
@@ -372,15 +274,15 @@ void findShapesCol2(const int w, const int h, int *edge, std::vector<Shape> &sha
             if (h_edge && !found_top && !found_ver) {
                 ort[0] = (edge[ind] & h_edge)?(i):(i+1);
                 ort[1] = (h_edge    & t_edge)?(j):(j+1);
-               // ort[0] = (h_edge    & t_edge)?(i):(i+1);
-               // ort[1] = (edge[ind] & h_edge)?(j):(j+1);
                 found_top = true;
             }
+
             // We've found a vertical edge which will be the start of our shape
             if (v_edge && !found_ver) {
                 shape.setStart(ort[0],ort[1]);
                 found_ver = true;
             }
+
             // We've found a possible bottom edge to keep until we run out of vertical edge.
             if (h_edge && found_ver) {
                 ort[0] = (edge[ind] & h_edge)?(i):(i+1);
@@ -390,15 +292,15 @@ void findShapesCol2(const int w, const int h, int *edge, std::vector<Shape> &sha
 
             // We've run out of horizontal edge and will end the shape, or we're at the end
             if ((!v_edge && found_ver) || ((j==h-1) && v_edge)) {
-                if (!found_top){       //We've found an L-start shape
+                if (!found_top){      // We've found an L-start shape
                     shape.setEnd(ort[0],ort[1]);
                     shape.setType((i==ort[0])?(-33):(-65),false);
                 }
-                else if (!found_bot){ //We've found an L-end shape
+                else if (!found_bot){ // We've found an L-end shape
                     shape.setEnd(ort[0],j);
                     shape.setType((i==ort[0])?(-127):(-257),false);
                 }
-                else{  //We've found a Z or U shape
+                else{  // We've found a Z or U shape
                     shape.setEnd(ort[0],ort[1]);
                     shape.setType(i,false);
                 }
@@ -474,8 +376,6 @@ void blend(const int w, const int h, int *pix, std::vector<Shape> &shapes) {
                 // If we're in a split cell only calculate the triangle area,
                 // else the area will be zero.
                 A = 0.5*fabs((fabs(b1+b2)>eps)?(b1+b2):(b1));
-
-               // std::cout << std::setw(4) << b1 << " " << std::setw(4) << b2 << " " << x_start << " " << y_start << std::endl;
 
                 if (b1 > 0) {
                     c_old = tmp[idx(w,h,x_start+i,y_start)];
@@ -619,7 +519,7 @@ int main (int argc, char *argv[]) {
     writeImg(edgepix,w,h,"edge.bmp");
 
     std::vector<Shape> shapes;
-    findShapesCol2(w, h, edge, shapes);
+    findShapesRow(w, h, edge, shapes);
 
     int *shapepix = new int[w*h];
     for (int i=0; i<w*h; i++) {shapepix[i] = 255;}
@@ -672,15 +572,15 @@ int main (int argc, char *argv[]) {
     writeImg(pix,w,h,"mlaa.bmp");
 
     // Print pixel values
-//    std::cout << std::endl << "   ";
-//    for (int i=0; i<w; i++) std::cout << std::setw(4) << i;
-//    for (int j=0; j<h; j++) {
-//        std::cout << std::endl << std::setw(3) << j << " ";
-//        for (int i=0; i<w; i++) {
-//            std::cout << std::setw(3) << pix[idx(w,h,i,j)] << " ";
-//        }
-//    }
-//    std::cout << std::endl;
+    std::cout << std::endl << "   ";
+    for (int i=0; i<w; i++) std::cout << std::setw(4) << i;
+    for (int j=0; j<h; j++) {
+        std::cout << std::endl << std::setw(3) << j << " ";
+        for (int i=0; i<w; i++) {
+            std::cout << std::setw(3) << pix[idx(w,h,i,j)] << " ";
+        }
+    }
+    std::cout << std::endl;
 
     return 0;
 }
