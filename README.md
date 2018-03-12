@@ -11,7 +11,7 @@ A simple proof of concept for smoothing syntethic models.
 1. ▏ left
 2. ▕ right
 4. ▁ bottom
-8. ▔
+8. ▔ top
 
 ### Shape classifications
 #### Row shapes
@@ -26,7 +26,7 @@ A simple proof of concept for smoothing syntethic models.
 
 #### Column shapes
 3. ┐
-   └
+..* └
 5. ┌
    ┘
 9. ┐
