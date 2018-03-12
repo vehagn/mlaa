@@ -63,7 +63,7 @@ void writeImg(const int *grey, const int w, const int h, const char* fname) {
 }
 
 void edgeDetect(const int w, const int h, const int *pix, int *edge) {
-    const int LIMIT = 64;
+    const int LIMIT = 16;
 
     int ind, ind_r, ind_b;
 
@@ -330,6 +330,7 @@ void blend(const int w, const int h, int *pix, std::vector<Shape> &shapes) {
     int x_end, y_end;
 
     float eps = 1e-8;
+    const int MAX_LEN = 5;
 
     int type;
 
@@ -354,6 +355,12 @@ void blend(const int w, const int h, int *pix, std::vector<Shape> &shapes) {
 
         x_len = abs(x_start - x_end)+1;
         y_len = abs(y_start - y_end)+1;
+
+        if ((x_len > MAX_LEN) || (y_len) > MAX_LEN) {
+            //Avoid processing too long shapes
+            continue;
+        }
+
         if (!(type%2)) { // We have a row shape by design.
             for (int i=0; i<x_len; i++) {
                 b1 = 0.5 - (i    )/(1.0*x_len);
@@ -378,13 +385,13 @@ void blend(const int w, const int h, int *pix, std::vector<Shape> &shapes) {
                 if (type ==   8) { // U-shape
                         c_old = pix[idx(w,h,x_start+i,y_start  )];
                         c_opp = pix[idx(w,h,x_start+i,y_start+1)];
-                        row[idx(w,h,x_start+i,y_start)] = (1-A)*c_old + A*c_opp;
+                        //row[idx(w,h,x_start+i,y_start)] = (1-A)*c_old + A*c_opp;
 
                 }
                 if (type ==  16) { // U-shape
                         c_old = pix[idx(w,h,x_start+i,y_start  )];
                         c_opp = pix[idx(w,h,x_start+i,y_start-1)];
-                        row[idx(w,h,x_start+i,y_start)] = (1-A)*c_old + A*c_opp;
+                        //row[idx(w,h,x_start+i,y_start)] = (1-A)*c_old + A*c_opp;
 
                     }
                  if (type ==  32) { // L-shape
@@ -425,13 +432,13 @@ void blend(const int w, const int h, int *pix, std::vector<Shape> &shapes) {
                 if (type ==   9) { // U-shape
                         c_old = pix[idx(w,h,x_start  ,y_start-j)];
                         c_opp = pix[idx(w,h,x_start+1,y_start-j)];
-                        col[idx(w,h,x_start  ,y_start-j)] = (1-A)*c_old + A*c_opp;
+                        //col[idx(w,h,x_start  ,y_start-j)] = (1-A)*c_old + A*c_opp;
 
                 }
                 if (type ==  17) { // U-shape
                         c_old = pix[idx(w,h,x_start  ,y_start-j)];
                         c_opp = pix[idx(w,h,x_start-1,y_start-j)];
-                        col[idx(w,h,x_start  ,y_start-j)] = (1-A)*c_old + A*c_opp;
+                        //col[idx(w,h,x_start  ,y_start-j)] = (1-A)*c_old + A*c_opp;
 
                 }
                  if (type ==  33) {
@@ -461,9 +468,9 @@ void blend(const int w, const int h, int *pix, std::vector<Shape> &shapes) {
 
 int main (int argc, char *argv[]) {
 
-    int w =   20;
-    int h =   10;
-    int ind =  0;
+    int w =   200; // 20;
+    int h =   100; // 10;
+    int ind =   0;
 
     int *fill = new int[w*h];
 
@@ -476,35 +483,35 @@ int main (int argc, char *argv[]) {
         for (int j=0; j<h; j++) {
             ind = idx(w,h,i,j);
             pix[ind] = 255; // Make sure we fill a color;
-            //if (   i         < w/4) pix[ind] = 127;
+            if (   i         < w/4) pix[ind] = 127;
             if (     j       < h/4) pix[ind] =  63;
             if (   i+j - h/4 < h  ) pix[ind] =  31;
             if (-2*i+j + 4*h < w  ) pix[ind] =   0;
         }
     }
     // Create L shape
-    pix[idx(w,h, 0,9)]=255;
-    pix[idx(w,h, 1,9)]=255;
-    pix[idx(w,h, 2,9)]=255;
-
-    pix[idx(w,h,18,9)]=255;
-    pix[idx(w,h,19,9)]=255;
-
-    // Create extra long Z shape
-    pix[idx(w,h,12,3)]=255;
-
-    // Create U shape
-    pix[idx(w,h,16,0)]=255;
-    pix[idx(w,h,17,0)]=255;
-    pix[idx(w,h,18,0)]=255;
-
-    pix[idx(w,h, 6,9)]=  0;
-
-    pix[idx(w,h, 9,9)]=  0;
-    pix[idx(w,h,10,9)]=  0;
-
-    pix[idx(w,h,19,4)]=255;
-
+//    pix[idx(w,h, 0,9)]=255;
+//    pix[idx(w,h, 1,9)]=255;
+//    pix[idx(w,h, 2,9)]=255;
+//
+//    pix[idx(w,h,18,9)]=255;
+//    pix[idx(w,h,19,9)]=255;
+//
+//    // Create extra long Z shape
+//    pix[idx(w,h,12,3)]=255;
+//
+//    // Create U shape
+//    pix[idx(w,h,16,0)]=255;
+//    pix[idx(w,h,17,0)]=255;
+//    pix[idx(w,h,18,0)]=255;
+//
+//    pix[idx(w,h, 6,9)]=  0;
+//
+//    pix[idx(w,h, 9,9)]=  0;
+//    pix[idx(w,h,10,9)]=  0;
+//
+//    pix[idx(w,h,19,4)]=255;
+//
 //    pix[idx(w,h,0,9)]=127;
 //    pix[idx(w,h,0,8)]=127;
 //    pix[idx(w,h,1,7)]=127;
@@ -545,32 +552,32 @@ int main (int argc, char *argv[]) {
     int *shapepix = new int[w*h];
     for (int i=0; i<w*h; i++) {shapepix[i] = 255;}
 
-    Shape shape;
-    for (int i=0; i<shapes.size(); i++){
-        shape = shapes.at(i);
-        std::cout << std::setw(2) << shape.getStartX() << " " << std::setw(2) << shape.getStartY() << " -> ";
-        std::cout << std::setw(2) << shape.getEndX()   << " " << std::setw(2) << shape.getEndY()   << " \t ";
-        std::cout << std::setw(2) << shape.getType()    << std::endl;
-        shapepix[idx(w,h,shape.getStartX(), shape.getStartY())] = 0;
-        shapepix[idx(w,h,shape.getEndX()  , shape.getEndY()  )] = 0;
-    }
-    writeImg(shapepix, w, h, "shapes.bmp");
-
-    // Print image
-    std::cout << std::endl << "   ";
-    for (int i=0; i<w; i++) std::cout << std::setw(2) << i << " ";
-    for (int j=0; j<h; j++) {
-        std::cout << std::endl << std::setw(2) << j << " ";
-        for (int i=0; i<w; i++) {
-            if (edge[idx(w,h,i,j)]) {
-                std::cout << std::setw(2) << edge[idx(w,h,i,j)] << " ";
-            }
-            else {
-                std::cout << " . ";
-            }
-        }
-    }
-    std::cout << std::endl;
+//    Shape shape;
+//    for (int i=0; i<shapes.size(); i++){
+//        shape = shapes.at(i);
+//        std::cout << std::setw(2) << shape.getStartX() << " " << std::setw(2) << shape.getStartY() << " -> ";
+//        std::cout << std::setw(2) << shape.getEndX()   << " " << std::setw(2) << shape.getEndY()   << " \t ";
+//        std::cout << std::setw(2) << shape.getType()    << std::endl;
+//        shapepix[idx(w,h,shape.getStartX(), shape.getStartY())] = 0;
+//        shapepix[idx(w,h,shape.getEndX()  , shape.getEndY()  )] = 0;
+//    }
+//    writeImg(shapepix, w, h, "shapes.bmp");
+//
+//    // Print image
+//    std::cout << std::endl << "   ";
+//    for (int i=0; i<w; i++) std::cout << std::setw(2) << i << " ";
+//    for (int j=0; j<h; j++) {
+//        std::cout << std::endl << std::setw(2) << j << " ";
+//        for (int i=0; i<w; i++) {
+//            if (edge[idx(w,h,i,j)]) {
+//                std::cout << std::setw(2) << edge[idx(w,h,i,j)] << " ";
+//            }
+//            else {
+//                std::cout << " . ";
+//            }
+//        }
+//    }
+//    std::cout << std::endl;
 //
 //    // Print transposed image
 //    std::cout << std::endl << "   ";
@@ -586,22 +593,21 @@ int main (int argc, char *argv[]) {
 //            }
 //        }
 //    }
-    std::cout << std::endl;
+//    std::cout << std::endl;
 
     blend(w,h,pix,shapes);
-
     writeImg(pix,w,h,"mlaa.bmp");
 
     // Print pixel values
-    std::cout << std::endl << "   ";
-    for (int i=0; i<w; i++) std::cout << std::setw(4) << i;
-    for (int j=0; j<h; j++) {
-        std::cout << std::endl << std::setw(3) << j << " ";
-        for (int i=0; i<w; i++) {
-            std::cout << std::setw(3) << pix[idx(w,h,i,j)] << " ";
-        }
-    }
-    std::cout << std::endl;
+//    std::cout << std::endl << "   ";
+//    for (int i=0; i<w; i++) std::cout << std::setw(4) << i;
+//    for (int j=0; j<h; j++) {
+//        std::cout << std::endl << std::setw(3) << j << " ";
+//        for (int i=0; i<w; i++) {
+//            std::cout << std::setw(3) << pix[idx(w,h,i,j)] << " ";
+//        }
+//    }
+//    std::cout << std::endl;
 
     return 0;
 }
