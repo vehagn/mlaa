@@ -298,7 +298,7 @@ void findShapesCol(const int w, const int h, int *edge, std::vector<Shape> &shap
                 }
                 else if (!found_bot){ // We've found an L-end shape
                     shape.setEnd(ort[0],j);
-                    shape.setType((i==ort[0])?(-127):(-257),false);
+                    shape.setType((i==ort[0])?(-129):(-257),false);
                 }
                 else{  // We've found a Z or U shape
                     shape.setEnd(ort[0],ort[1]);
@@ -309,8 +309,8 @@ void findShapesCol(const int w, const int h, int *edge, std::vector<Shape> &shap
 
                 // Reset flags
                 found_top = false;
-                found_bot  = false;
-                found_ver   = false;
+                found_bot = false;
+                found_ver = false;
                 shape.reset();
             }
             // Reset if we don't have any edges
@@ -350,26 +350,7 @@ void blend(const int w, const int h, int *pix, std::vector<Shape> &shapes) {
 
         x_len = abs(x_start - x_end)+1;
         y_len = abs(y_start - y_end)+1;
-        if (type ==    2) {
-            for (int i=0; i<x_len; i++) {
-                b1 = 0.5 - (i    )/(1.0*x_len);
-                b2 = 0.5 - (i+1.0)/(1.0*x_len);
-                // If we're in a split cell only calculate the triangle area,
-                // else the area will be zero.
-                A = 0.5*fabs((fabs(b1+b2)>eps)?(b1+b2):(b1));
-                if (b1 > 0) {
-                    c_old = tmp[idx(w,h,x_start+i,y_start)];
-                    c_opp = tmp[idx(w,h,x_start+i,y_end  )];
-                    pix[idx(w,h,x_start+i,y_start)] = (1-A)*c_old + A*c_opp;
-                }
-                if (b2 < 0) {
-                    c_old = tmp[idx(w,h,x_start+i,y_end  )];
-                    c_opp = tmp[idx(w,h,x_start+i,y_start)];
-                    pix[idx(w,h,x_start+i,y_end  )] = (1-A)*c_old + A*c_opp;
-                }
-            }
-        }
-        if (type ==    4) {
+        if (!(type%2)) { // We have a row shape by design.
             for (int i=0; i<x_len; i++) {
                 b1 = 0.5 - (i    )/(1.0*x_len);
                 b2 = 0.5 - (i+1.0)/(1.0*x_len);
@@ -377,66 +358,93 @@ void blend(const int w, const int h, int *pix, std::vector<Shape> &shapes) {
                 // else the area will be zero.
                 A = 0.5*fabs((fabs(b1+b2)>eps)?(b1+b2):(b1));
 
-                if (b1 > 0) {
-                    c_old = tmp[idx(w,h,x_start+i,y_start)];
-                    c_opp = tmp[idx(w,h,x_start+i,y_end  )];
-                    pix[idx(w,h,x_start+i,y_start)] = (1-A)*c_old + A*c_opp;
+                if ((type ==   2) || (type ==   4)) { // Z-shapes
+                    std::cout << type << " " << i << ": " << std::setw(4) << b1 << " " << std::setw(4) << b2 << " " << std::setw(3) << A << std::endl;
+                        if (b1 > 0) {
+                            c_old = tmp[idx(w,h,x_start+i,y_start)];
+                            c_opp = tmp[idx(w,h,x_start+i,y_end  )];
+                            pix[idx(w,h,x_start+i,y_start)] = (1-A)*c_old + A*c_opp;
+                        }
+                        if (b2 < 0) {
+                            c_old = tmp[idx(w,h,x_start+i,y_end  )];
+                            c_opp = tmp[idx(w,h,x_start+i,y_start)];
+                            pix[idx(w,h,x_start+i,y_end  )] = (1-A)*c_old + A*c_opp;
+                        }
+
                 }
-                if (b2 < 0) {
-                    c_old = tmp[idx(w,h,x_start+i,y_end  )];
-                    c_opp = tmp[idx(w,h,x_start+i,y_start)];
-                    pix[idx(w,h,x_start+i,y_end  )] = (1-A)*c_old + A*c_opp;
+                if (type ==   8) { // U-shape
+                        c_old = tmp[idx(w,h,x_start+i,y_start  )];
+                        c_opp = tmp[idx(w,h,x_start+i,y_start+1)];
+                        pix[idx(w,h,x_start+i,y_start)] = (1-A)*c_old + A*c_opp;
+
                 }
+                if (type ==  16) { // U-shape
+                        c_old = tmp[idx(w,h,x_start+i,y_start  )];
+                        c_opp = tmp[idx(w,h,x_start+i,y_start-1)];
+                        pix[idx(w,h,x_start+i,y_start)] = (1-A)*c_old + A*c_opp;
+
+                    }
+                 if (type ==  32) { // L-shape
+                 // TODO
+                 }
+                 if (type ==  64) { // L-shape
+                 // TODO
+                 }
+                 if (type == 128) { // L-shape
+                 // TODO
+                 }
+                 if (type == 256) { // L-shape
+                 // TODO
+                 }
             }
         }
-        if (type ==    8) {
-            for (int i=0; i<x_len; i++) {
-                b1 = 0.5 - (i    )/(1.0*x_len);
-                b2 = 0.5 - (i+1.0)/(1.0*x_len);
-
+        else {
+            for (int j=0; j<y_len; j++) {
+                b1 = 0.5 - (j    )/(1.0*y_len);
+                b2 = 0.5 - (j+1.0)/(1.0*y_len);
+                // If we're in a split cell only calculate the triangle area,
+                // else the area will be zero.
                 A = 0.5*fabs((fabs(b1+b2)>eps)?(b1+b2):(b1));
 
-                c_old = tmp[idx(w,h,x_start+i,y_start  )];
-                c_opp = tmp[idx(w,h,x_start+i,y_start-1)];
+                if ((type ==   3) || (type ==   5)) { // Z-shapes
+                    std::cout << type << " " << j << ": " << std::setw(4) << b1 << " " << std::setw(4) << b2 << " " << std::setw(3) << A << std::endl;
+                        if (b1 > 0) {
+                            c_old = tmp[idx(w,h,x_start  ,y_start+j)];
+                            c_opp = tmp[idx(w,h,x_end    ,y_start+j)];
+                            pix[idx(w,h,x_start  ,y_start+j)] = (1-A)*c_old + A*c_opp;
+                        }
+                        if (b2 < 0) {
+                            c_old = tmp[idx(w,h,x_end    ,y_start+j)];
+                            c_opp = tmp[idx(w,h,x_start  ,y_start+j)];
+                            pix[idx(w,h,x_end    ,y_start+j)] = (1-A)*c_old + A*c_opp;
+                        }
 
-                pix[idx(w,h,x_start+i,y_start)] = (1-A)*c_old + A*c_opp;
+                }
+                if (type ==   9) { // U-shape
+                        c_old = tmp[idx(w,h,x_start  ,y_start+j)];
+                        c_opp = tmp[idx(w,h,x_start+1,y_start+j)];
+                        pix[idx(w,h,x_start  ,y_start+j)] = (1-A)*c_old + A*c_opp;
 
+                }
+                if (type ==  17) { // U-shape
+                        c_old = tmp[idx(w,h,x_start  ,y_start+j)];
+                        c_opp = tmp[idx(w,h,x_start-1,y_start+j)];
+                        pix[idx(w,h,x_start  ,y_start+j)] = (1-A)*c_old + A*c_opp;
+
+                    }
+                 if (type ==  33) {
+                 // TODO
+                 }
+                 if (type ==  65) {
+                 // TODO
+                 }
+                 if (type == 129) {
+                 // TODO
+                 }
+                 if (type == 257) {
+                 // TODO
+                 }
             }
-        }
-        if (type ==    16) {
-            for (int i=0; i<x_len; i++) {
-                b1 = 0.5 - (i    )/(1.0*x_len);
-                b2 = 0.5 - (i+1.0)/(1.0*x_len);
-
-                A = 0.5*fabs((fabs(b1+b2)>eps)?(b1+b2):(b1));
-
-                c_old = tmp[idx(w,h,x_start+i,y_start  )];
-                c_opp = tmp[idx(w,h,x_start+i,y_start-1)];
-
-                pix[idx(w,h,x_start+i,y_start)] = (1-A)*c_old + A*c_opp;
-
-            }
-        }
-        if (type ==   32) {
-        // TODO
-        }
-        if (type ==   64) {
-        // TODO
-        }
-        if (type ==  128) {
-        // TODO
-        }
-        if (type ==  256) {
-        // TODO
-        }
-        if (type ==  512) {
-        // TODO
-        }
-        if (type == 1024) {
-        // TODO
-        }
-        if (type == 2048) {
-        // TODO
         }
     }
     delete[] tmp;
