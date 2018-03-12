@@ -25,19 +25,19 @@ A simple proof of concept for smoothing syntethic models.
 256. ┌─ (256)
 
 #### Column shapes
-3. ┐<br> (3)
+3. ┐ (3)<br>
    └
-5. ┌<br> (5)
+5. ┌ (5) <br>
    ┘
-9. ┐<br> (9)
+9. ┐ (9) <br>
    ┘
-17. ┌<br> (17)
+17. ┌ (17) <br> 
     └
-33. │<br> (33)
+33. │ (33) <br>
     ┘
-65. │<br> (65)
+65. │ (65) <br>
     └
-129. ┐<br> (129)
+129. ┐ (129) <br>
      │
-257. ┌<br> (257)
+257. ┌ (257) <br>
      │
