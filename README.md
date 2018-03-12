@@ -8,36 +8,36 @@ Currently only Z-shapes are fully supported. U shapes are implemented, but some 
 A simple proof of concept for smoothing syntethic models.
 
 ### Edge classifications
-1. ▏ left
-2. ▕ right
-4. ▁ bottom
-8. ▔
+1. ▏ (1) left
+2. ▕ (2) right
+4. ▁ (4) bottom
+8. ▔ (8) top
 
 ### Shape classifications
 #### Row shapes
-2. └┐
-4. ┌┘
-8. └┘
-16. ┌┐
-32. ─┘
-64. ─┐
-128. └─
-256. ┌─
+2. └┐ (2)
+4. ┌┘ (4)
+8. └┘ (8)
+16. ┌┐ (16)
+32. ─┘ (32)
+64. ─┐ (64)
+128. └─ (129)
+256. ┌─ (256)
 
 #### Column shapes
-3. ┐
+3. ┐ (3)<br>
    └
-5. ┌
+5. ┌ (5) <br>
    ┘
-9. ┐
+9. ┐ (9) <br>
    ┘
-17. ┌
+17. ┌ (17) <br> 
     └
-33. │
+33. │ (33) <br>
     ┘
-65. │
+65. │ (65) <br>
     └
-129. ┐
+129. ┐ (129) <br>
      │
-257. ┌
+257. ┌ (257) <br>
      │
