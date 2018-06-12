@@ -256,7 +256,7 @@ void findShapesCol(const int w, const int h, int *edge, std::vector<Shape> &shap
             v_edge = ((edge[ind] & r_edge) || (edge[ind_r] & l_edge));
             h_edge = ((edge[ind] | edge[ind_r]) & (b_edge | t_edge));
 
-            // Reset flags for each line
+            // Reset flags at start of each row
             if (j==0) {
                 found_bot = false;
                 found_top = false;
@@ -276,13 +276,11 @@ void findShapesCol(const int w, const int h, int *edge, std::vector<Shape> &shap
                 ort[1] = (h_edge    & t_edge)?(j):(j+1);
                 found_top = true;
             }
-
             // We've found a vertical edge which will be the start of our shape
             if (v_edge && !found_ver) {
                 shape.setStart(ort[0],ort[1]);
                 found_ver = true;
             }
-
             // We've found a possible bottom edge to keep until we run out of vertical edge.
             if (h_edge && found_ver) {
                 ort[0] = (edge[ind] & h_edge)?(i):(i+1);
@@ -320,6 +318,7 @@ void findShapesCol(const int w, const int h, int *edge, std::vector<Shape> &shap
         }
     }
 }
+
 void blend(const int w, const int h, int *pix, std::vector<Shape> &shapes) {
     int c_old, c_opp;
     float b1, b2;
@@ -343,15 +342,14 @@ void blend(const int w, const int h, int *pix, std::vector<Shape> &shapes) {
         col[i] = pix[i];
     }
 
-    for (int s=0; s<shapes.size(); s++) { // Go through all shapes.
-        shape = shapes.at(s);
+    for (std::vector<Shape>::iterator it = shapes.begin(); it != shapes.end(); it++) { // Go through all shapes.
 
-        x_start = shape.getStartX();
-        y_start = shape.getStartY();
-        x_end   = shape.getEndX();
-        y_end   = shape.getEndY();
+        x_start = it->getStartX();
+        y_start = it->getStartY();
+        x_end   = it->getEndX();
+        y_end   = it->getEndY();
 
-        type    = shape.getType();
+        type    = it->getType();
 
         x_len = abs(x_start - x_end)+1;
         y_len = abs(y_start - y_end)+1;
